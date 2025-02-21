@@ -1,0 +1,221 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Control3 Proxy</title>
+    <style>
+        body, html { margin: 0; padding: 0; overflow: hidden;}
+        video { width: 100%; height: 100%; border: none; }
+    </style>
+    <script src="https://cdn.ably.io/lib/ably.min-1.js"></script>
+</head>
+
+<body>
+
+    <video id="localVideo" autoplay muted playsinline></video>
+
+    <script>
+
+        // Keys
+        let TWILIO_ACCOUNT_SID = "";
+        let TWILIO_AUTH_TOKEN = "";
+
+        // Ably
+        let client;
+        let clientId;
+        let channel;
+
+        // WebRTC
+        let vSource = "";
+        let deviceId = "";
+        let STUN = 'Google';
+        let peerConnection;
+        let dataChannel;
+        let localStream;
+        let iceCandidateQueue = [];
+
+        async function Ably_SendMessage(str) {
+            var message = { data: str, clientId: "proxy3" };
+            channel.publish('Status', message);
+        }
+
+        async function log(message) {
+            Ably_SendMessage(message);
+        }
+
+        async function initialize(_vSource, _ABLY_API, _STUN, _TWILIO_ACCOUNT_SID, _TWILIO_AUTH_TOKEN)
+        {
+            vSource = _vSource;
+            STUN = _STUN;
+            TWILIO_ACCOUNT_SID = _TWILIO_ACCOUNT_SID;
+            TWILIO_AUTH_TOKEN = _TWILIO_AUTH_TOKEN;
+
+            client = new Ably.Realtime(_ABLY_API);
+            clientId = 'sender';
+            channel = client.channels.get("Control3");
+
+            channel.subscribe('signal', async (message) => {
+                const signal = message.data;
+
+                if (signal.senderId === clientId) { return; } //Dont process messages from myself
+
+                log(`received signal: ${signal.type}`);
+
+                try {
+                    if (signal.type === 'answer') {
+                        const remoteDesc = new RTCSessionDescription({
+                            type: signal.type,
+                            sdp: signal.sdp
+                        });
+                        await peerConnection.setRemoteDescription(remoteDesc);
+                        log('remote description set');
+
+                        // Process any queued candidates after remote description is set
+                        if (iceCandidateQueue.length) {
+                            log(`processing ${iceCandidateQueue.length} queued candidates`);
+                            for (const candidate of iceCandidateQueue) {
+                                await peerConnection.addIceCandidate(candidate);
+                                log('added queued ICE candidate');
+                            }
+                            iceCandidateQueue = [];
+                        }
+                    }
+
+                    if (signal.type === 'ice-candidate' && signal.candidate) {
+                        if (peerConnection && peerConnection.remoteDescription) {
+                            await peerConnection.addIceCandidate(signal.candidate);
+                            log('added ICE candidate');
+                        }
+                        else {
+                            iceCandidateQueue.push(signal.candidate);
+                            log('queued ICE candidate - waiting for remote description');
+                        }
+                    }
+                } catch (e) { log(`error handling signal: ${e.message}`); }
+            });
+
+            log('webView2 Initialized');
+        }
+
+        async function startStreaming()
+        {
+            async function GetVideoSources(name)
+            {
+                let dID = "";
+                try
+                {
+                    const devices = await navigator.mediaDevices.enumerateDevices();
+                    const videoDevices = devices.filter(device => device.kind === 'videoinput');
+                    videoDevices.forEach(device =>
+                    {
+                        Ably_SendMessage(`available videosource: ${device.label} ${device.deviceId}`);
+                        if (name !== "" && device.label.substring(0, name.length) === name) { dID = device.deviceId; }
+                    });
+                } catch (error) { Ably_SendMessage(`error enumerating video sources: ${error.message}`); }
+                if (dID === "") { Ably_SendMessage(`first available video source selected`); }
+                else { Ably_SendMessage(`selected videosource: ${dID}`); }
+                return dID;
+            }
+
+            async function getTwilioTurnCredentials()
+            {
+                const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Tokens.json`,
+                    {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Basic ' + btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`) }
+                    });
+                const data = await response.json();
+                return data.ice_servers;
+            }
+
+            try
+            {
+                let iceServers = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }, { urls: 'stun:stun2.l.google.com:19302' }];
+                if (STUN === 'Twilio') { log('use Twilio STUN/TURN'); iceServers = await getTwilioTurnCredentials(); } else { log('use Google STUN'); }
+                const configuration = { iceServers };
+
+                try
+                {
+                    deviceId = await GetVideoSources(vSource);
+                    localStream = await navigator.mediaDevices.getUserMedia(
+                    {
+                        video: 
+                        {
+                            deviceId: deviceId,
+                            width: { ideal: 1920 },
+                            height: { ideal: 1080 },
+                            frameRate: { ideal: 30, max: 30 }
+                        }
+                    });
+                    log(`local stream active: ${localStream.active}`);
+                    document.getElementById('localVideo').srcObject = localStream;
+                } catch (error) { log(`error accessing camera: ${error.message}`); }
+
+                document.getElementById('localVideo').srcObject = localStream;
+
+                peerConnection = new RTCPeerConnection(configuration);
+
+                peerConnection.onconnectionstatechange = () => { log(`connection state: ${peerConnection.connectionState}`); };
+                peerConnection.oniceconnectionstatechange = () => { log(`ICE connection state: ${peerConnection.iceConnectionState}`); };
+
+                dataChannel = peerConnection.createDataChannel("dataChannel");
+
+                dataChannel.onopen = () => {
+                    log('data channel is open');
+                };
+
+                dataChannel.onmessage = (event) => {
+                    window.chrome.webview.postMessage(event.data);
+                };
+
+                localStream.getTracks().forEach(track => {
+                    track.contentHint = 'detail';
+                    peerConnection.addTrack(track, localStream);
+
+                    const trackSettings = track.getSettings();
+                    log(`added track: ${track.kind}, device ID: ${trackSettings.deviceId}`);
+                });
+
+                peerConnection.onicecandidate = event =>
+                {
+                    if (event.candidate)
+                    {
+                        log('sending ICE candidate');
+                        channel.publish('signal', { type: 'ice-candidate', candidate: event.candidate, senderId: clientId });
+                    }
+                };
+
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+
+                log('sending offer');
+                channel.publish('signal', { type: 'offer', sdp: offer.sdp, senderId: clientId });
+
+            } catch (e) { log(`error starting stream: ${e.message}`); }
+        }
+
+        async function stopStreaming()
+        {
+            if (localStream)
+            {
+                localStream.getTracks().forEach(track =>
+                {
+                    track.stop();
+                    log(`stopped track: ${track.kind}`);
+                });
+            }
+            if (peerConnection)
+            {
+                peerConnection.close();
+                log('peer connection closed');
+            }
+            peerConnection = null;
+            iceCandidateQueue = [];
+            localStream = null;
+            document.getElementById('localVideo').srcObject = null;
+        }
+
+    </script>
+
+</body>
+</html>

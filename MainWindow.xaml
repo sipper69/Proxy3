@@ -1,0 +1,79 @@
+<Window
+    x:Class="Proxy3.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Proxy3"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="Proxy3">
+
+    <Grid Loaded="Window_Loaded">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="530"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <Border BorderBrush="Black" BorderThickness="1" Padding="0" Grid.Row="0" Grid.Column="0" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="20,10,0,0">
+            <WebView2 x:Name="webView" Width="512" Height="288" Margin="0"/>
+        </Border>
+
+        <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Vertical" Margin="20,10,0,0">
+            <TextBlock Text="-- Restart Proxy3 after you changed a setting --" HorizontalAlignment="Center" VerticalAlignment="Center"  Margin="0,20,0,20"/>
+
+            <Grid Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="150"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="Video Source" FontWeight="Bold" VerticalAlignment="Center" ToolTipService.ToolTip="Videosource.&#x0a;Default source will be selected when empty or not found"/>
+                <ComboBox x:Name="vSource" Grid.Column="1" SelectedValuePath="Tag" Width="250" HorizontalAlignment="Left" ToolTipService.ToolTip="Videosource.&#x0a;Default source will be selected when empty or not found"/>
+            </Grid>
+
+            <Grid Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="150"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="Ably API-string" Margin="0,0,10,0" FontWeight="Bold" VerticalAlignment="Center" ToolTipService.ToolTip="Use Ably.com for WebRTC signalling.&#x0a;&#x0a;- Create an Ably account&#x0a;- Create new app (any will do)&#x0a;- Grab API key from there (with sufficient capabilities)"/>
+                <PasswordBox x:Name="AblyAPI" Grid.Column="1" Width="250" HorizontalAlignment="Left" ToolTipService.ToolTip="Use Ably.com for WebRTC signalling.&#x0a;&#x0a;- Create an Ably account&#x0a;- Create new app (any will do)&#x0a;- Grab API key from there (with sufficient capabilities)"/>
+            </Grid>
+
+            <Grid Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="150"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="Connection Mode" FontWeight="Bold" VerticalAlignment="Center" ToolTipService.ToolTip="WebRTC Connection mode to bypass NAT challenges.&#x0a;&#x0a;STUN via Google will suffice most of the time.&#x0a;Use a paid service to relay your traffic based on TURN.&#x0a;Control3 does support Twilio."/>
+                <ComboBox x:Name="STUN" Grid.Column="1" SelectedValuePath="Tag" Width="250" HorizontalAlignment="Left" ToolTipService.ToolTip="WebRTC Connection mode to bypass NAT challenges.&#x0a;&#x0a;STUN via Google will suffice most of the time.&#x0a;Use a paid service to relay your traffic based on TURN.&#x0a;Control3 does support Twilio."/>
+            </Grid>
+
+            <Grid Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="150"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="LTwilioSID" Text="Twilio Account SID" Visibility="Collapsed" Margin="0,0,10,0" FontWeight="Bold" VerticalAlignment="Center" ToolTipService.ToolTip="Use Twilio.com for WebRTC traffic relay.&#x0a;&#x0a;- Create a Twilio account&#x0a;- Account Dashboard&#x0a;- Account Info"/>
+                <PasswordBox x:Name="TwilioSID" Visibility="Collapsed" Grid.Column="1" Width="250" HorizontalAlignment="Left" ToolTipService.ToolTip="Use Twilio.com for WebRTC traffic relay.&#x0a;&#x0a;- Create a Twilio account&#x0a;- Account Dashboard&#x0a;- Account Info"/>
+            </Grid>
+
+            <Grid Margin="0,0,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="150"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="LTwilioAuth" Text="Twilio Auth Token"  Visibility="Collapsed" FontWeight="Bold" VerticalAlignment="Center" ToolTipService.ToolTip="Use Twilio.com for WebRTC traffic relay.&#x0a;&#x0a;- Create a Twilio account&#x0a;- Account Dashboard&#x0a;- Account Info"/>
+                <PasswordBox x:Name="TwilioAuth"  Visibility="Collapsed" Grid.Column="1" Width="250" HorizontalAlignment="Left" ToolTipService.ToolTip="Use Twilio.com for WebRTC traffic relay.&#x0a;&#x0a;- Create a Twilio account&#x0a;- Account Dashboard&#x0a;- Account Info"/>
+            </Grid>
+           
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" Grid.ColumnSpan="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Margin="20,0,0,0" Height="270">
+            <RichTextBlock x:Name="LogText" Margin="10" IsTextSelectionEnabled="True" />
+        </ScrollViewer>
+    </Grid>
+</Window>

@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Proxy3 (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "Proxy3 (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
