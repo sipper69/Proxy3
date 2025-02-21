@@ -1,5 +1,8 @@
 # Proxy3
 
+![image](https://github.com/user-attachments/assets/c635014e-389e-44ca-bc06-69ac1df70e8d)
+
+
 Use Control3 via a secure WebRTC session to remotely control your device over the internet.
 
 Proxy3 will provide the CH9329 and Video access to Control3 via a secure WebRTC session.
