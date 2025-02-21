@@ -32,3 +32,6 @@ Control3 2.0.1 will be release on the Microsoft App Store soon...
 Cheers
 
 
+note:
+For PoC only, don't use in production. 
+A JWT approach must be implemented first to make sure your API credentials are secure.
